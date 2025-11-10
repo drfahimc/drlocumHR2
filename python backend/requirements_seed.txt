@@ -1,0 +1,18 @@
+# Seed Scripts Dependencies
+# Install only what you need based on your database choice
+
+# Core (required for seed.py)
+# No external dependencies - uses only standard library
+
+# For SQLAlchemy seed script
+sqlalchemy>=2.0.0
+
+# For Firestore seed script
+firebase-admin>=6.0.0
+
+# For MongoDB seed script
+pymongo>=4.0.0
+
+# Optional: For better JSON formatting
+# (already included in Python 3.7+)
+

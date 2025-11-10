@@ -1,0 +1,115 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user is the owner
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Helper function to get user type from users collection
+    function getUserType() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.userType;
+    }
+    
+    // Users collection - users can read/update their own data
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId);
+    }
+    
+    // Doctors collection - authenticated users can read, doctors can update their own
+    match /doctors/{doctorId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && 
+        (resource.data.userId == request.auth.uid || getUserType() == 'hr');
+    }
+    
+    // Documents collection - authenticated users can read, doctors can manage their own
+    match /documents/{documentId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+    
+    // Hospitals collection - authenticated users can read, HR can manage
+    match /hospitals/{hospitalId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && 
+        (resource.data.managedBy == request.auth.uid || getUserType() == 'hr');
+    }
+    
+    // Jobs collection - authenticated users can read, HR can create/update
+    match /jobs/{jobId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && 
+        (resource.data.createdBy == request.auth.uid || getUserType() == 'hr');
+    }
+    
+    // Applications collection - authenticated users can read, doctors can create their own
+    match /applications/{applicationId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && 
+        (resource.data.doctorId == request.auth.uid || getUserType() == 'hr');
+    }
+    
+    // Shifts collection - authenticated users can read, HR can manage
+    match /shifts/{shiftId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && 
+        (resource.data.doctorId == request.auth.uid || getUserType() == 'hr');
+    }
+    
+    // Payments collection - authenticated users can read their own, HR can manage
+    match /payments/{paymentId} {
+      allow read: if isAuthenticated() && 
+        (resource.data.doctorId == request.auth.uid || getUserType() == 'hr');
+      allow write: if isAuthenticated() && getUserType() == 'hr';
+    }
+    
+    // Notifications collection - users can read their own
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+    
+    // Feedback collection - authenticated users can read, doctors can create
+    match /feedback/{feedbackId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated();
+    }
+    
+    // Admin messages collection - users can read their own
+    match /admin_messages/{messageId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+    
+    // HR Doctor Pool collection - HR can manage their own pool
+    match /hr_doctor_pool/{poolId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && 
+        (resource.data.hrId == request.auth.uid || getUserType() == 'hr');
+    }
+    
+    // DEVELOPMENT MODE: Uncomment below to allow all access (ONLY FOR TESTING)
+    // WARNING: This allows anyone to read/write your database. Use only during development!
+    // match /{document=**} {
+    //   allow read, write: if true;
+    // }
+  }
+}
+
